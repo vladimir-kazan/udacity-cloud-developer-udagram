@@ -1,6 +1,7 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import {filterImageFromURL, deleteLocalFiles} from './util/util';
+import { filter } from 'bluebird';
 
 (async () => {
 
@@ -29,12 +30,34 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
 
   /**************************************************************************** */
 
+  app.get('/filteredimage', async (req: express.Request, res: express.Response) => {
+    const { image_url: imageUrl } = req.query;
+    if (!imageUrl) {
+      res.statusCode = 400;
+      return res.send("Bad Request");
+    }
+    try {
+      const filtered = await filterImageFromURL(imageUrl);
+      res.on('finish', () => {
+        try {
+          deleteLocalFiles([filtered]);
+        } catch {
+          console.error(`Error deleting ${filtered}`);
+        }
+      });
+      return res.sendFile(filtered);
+    } catch (ex) {
+      res.statusCode = 500;
+      return res.send(ex.message || 'Unknown server error');
+    }
+  });
+
   //! END @TODO1
   
   // Root Endpoint
   // Displays a simple message to the user
-  app.get( "/", async ( req, res ) => {
-    res.send("try GET /filteredimage?image_url={{}}")
+  app.get( '/', async ( req, res ) => {
+    res.send('try GET /filteredimage?image_url={{}}')
   } );
   
 
